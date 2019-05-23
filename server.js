@@ -54,18 +54,7 @@ const port = process.env.PORT || 3000;
 //Static file declaration
 app.use(express.static(path.join(__dirname, 'client/build')));
 
-//production mode
-if(process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  //
-  app.get('*', (req, res) => {
-    res.sendfile(path.join(__dirname = 'client/build/index.html'));
-  })
-}
 
-app.get('*', (req, res) => {
-  res.sendfile(path.join(__dirname = 'client/build/index.html'));
-})
 
 /*  Connect to mongodb database using mongoose  */
 mongoose.connect(keys.mongodb.uri, { useNewUrlParser: true });
@@ -309,5 +298,18 @@ io.on("connection", socket => {
     }
   });
 });
+
+//production mode
+if(process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  //
+  app.get('*', (req, res) => {
+    res.sendfile(path.join(__dirname = 'client/build/index.html'));
+  })
+}
+
+app.get('*', (req, res) => {
+  res.sendfile(path.join(__dirname = 'client/build/index.html'));
+})
 
 server.listen(port);
