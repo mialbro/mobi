@@ -16,7 +16,6 @@ const keys = require('./config/keys');
 const User = require("./database/user");
 const Chat = require("./database/chat");
 
-
 /*  Authorization for logging into mobi chat room  */
 passport.use(
   new Strategy((username, password, cb) => {
@@ -39,6 +38,11 @@ passport.use(
   })
 );
 
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(
@@ -50,10 +54,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const port = process.env.PORT || 3000;
-
-//Static file declaration
-app.use(express.static(path.join(__dirname, 'client/build')));
-
 
 
 /*  Connect to mongodb database using mongoose  */
@@ -72,11 +72,6 @@ passport.deserializeUser((id, done) => {
   User.findById(id).then(user => {
     done(null, user);
   });
-});
-
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express App running' });
 });
 
 
@@ -299,17 +294,6 @@ io.on("connection", socket => {
   });
 });
 
-//production mode
-if(process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  //
-  app.get('*', (req, res) => {
-    res.sendfile(path.join(__dirname = 'client/build/index.html'));
-  })
-}
 
-app.get('*', (req, res) => {
-  res.sendfile(path.join(__dirname = 'client/build/index.html'));
-})
 
 server.listen(port);
