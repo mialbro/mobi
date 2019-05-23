@@ -16,6 +16,7 @@ const keys = require('./config/keys');
 const User = require("./database/user");
 const Chat = require("./database/chat");
 
+
 /*  Authorization for logging into mobi chat room  */
 passport.use(
   new Strategy((username, password, cb) => {
