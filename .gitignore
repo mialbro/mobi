@@ -30,7 +30,6 @@ bower_components
 .lock-wscript
 
 # Dependency directories
-node_modules/
 jspm_packages/
 
 
