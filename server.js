@@ -63,6 +63,10 @@ if(process.env.NODE_ENV === 'production') {
   })
 }
 
+app.get('*', (req, res) => {
+  res.sendfile(path.join(__dirname = 'client/build/index.html'));
+})
+
 /*  Connect to mongodb database using mongoose  */
 mongoose.connect(keys.mongodb.uri, { useNewUrlParser: true });
 let db = mongoose.connection;
