@@ -4,6 +4,7 @@ const app = express();
 const server = require("http").Server(app);
 var passport = require("passport");
 var Strategy = require("passport-local").Strategy;
+const path = require('path');
 
 const io = require("socket.io")(server);
 const bodyParser = require("body-parser");
@@ -47,7 +48,19 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 3000;
+
+//Static file declaration
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+//production mode
+if(process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  //
+  app.get('*', (req, res) => {
+    res.sendfile(path.join(__dirname = 'client/build/index.html'));
+  })
+}
 
 /*  Connect to mongodb database using mongoose  */
 mongoose.connect(keys.mongodb.uri, { useNewUrlParser: true });
@@ -66,6 +79,12 @@ passport.deserializeUser((id, done) => {
     done(null, user);
   });
 });
+
+/* GET home page. */
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express App running' });
+});
+
 
 // Client has connected
 io.on("connection", socket => {
