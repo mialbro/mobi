@@ -9,6 +9,7 @@ import ButtonToolbar from "react-bootstrap/Row";
 import UpdateChatName from "../UpdateChatName";
 import ChangeChatOwner from "../ChangeChatOwner";
 import ChangeUsername from "../ChangeUsername";
+import Form from "react-bootstrap/Form";
 
 class Main extends Component {
   constructor(props) {
@@ -189,7 +190,7 @@ class Main extends Component {
               className="mb-3"
               onSubmit={this.handleCreateNewChatSubmit}
             >
-              <Form.Label>Create A New Chat</Form.Label>
+              
               <FormControl
                 autoFocus
                 aria-describedby="basic-addon1"
@@ -210,7 +211,7 @@ class Main extends Component {
               </InputGroup.Prepend>
             </InputGroup>
 
-            <Form.Label>Enter Your Friend's Username</Form.Label>
+            
             <InputGroup className="mb-3" style={this.inputGroupStyle}>
               <FormControl
                 value={this.state.newChatOwner}
