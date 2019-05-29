@@ -45,7 +45,7 @@ class PreviewMessage extends Component {
         this.timer[data.username] = setTimeout(() => {
           delete messages[data.username];
           this.setState({ messages: messages });
-        }, 1000);
+        }, 2000);
       }
     );
   };
