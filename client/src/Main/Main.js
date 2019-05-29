@@ -189,6 +189,7 @@ class Main extends Component {
               className="mb-3"
               onSubmit={this.handleCreateNewChatSubmit}
             >
+              <Form.Label>Create A New Chat</Form.Label>
               <FormControl
                 autoFocus
                 aria-describedby="basic-addon1"
@@ -209,6 +210,7 @@ class Main extends Component {
               </InputGroup.Prepend>
             </InputGroup>
 
+            <Form.Label>Enter Your Friend's Username</Form.Label>
             <InputGroup className="mb-3" style={this.inputGroupStyle}>
               <FormControl
                 value={this.state.newChatOwner}
