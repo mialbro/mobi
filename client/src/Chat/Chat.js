@@ -5,45 +5,74 @@ import FormControl from "react-bootstrap/FormControl";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import ButtonToolbar from "react-bootstrap/Row";
+import Message from "../Message";
+import PreviewMessage from "../PreviewMessage";
 
 class Chat extends Component {
   constructor(props) {
     super(props);
     this.text = 0;
+    this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
     this.state = {
       newMessage: "",
       newMessages: [],
-      textarea: 0
+      textarea: 0,
+      width: 0,
+      height: 0
     };
   }
 
+  scrollToBottom = () => {
+    this.messagesEnd.scrollIntoView({ behavior: "smooth" });
+  };
+
   componentDidMount() {
+    this.scrollToBottom();
     // send chat id to server to create private message flow
-    this.props.socket.emit("chat online", this.props.chat._id);
-    this.props.socket.on("message sent", data => {
-      console.log(data);
-      this.addMessage(data);
+    this.props.socket.emit("chat online", {
+      chatId: this.props.chat._id,
+      userId: this.props.user.id
+    });
+    this.props.socket.on("message-sent", message => {
+      this.scrollToBottom();
+      this.props.handleNewMessage(message);
+      //this.addMessage(data);
     });
 
-    this.props.socket.on("error sending message", () => {
-      console.log("error");
+    this.props.socket.on("chat online", user => {
+      this.props.handleUserOnline(user);
     });
+
+    this.props.socket.on("error sending message", () => {});
+    window.addEventListener("resize", this.updateWindowDimensions.bind(this));
+    this.updateWindowDimensions();
+  }
+
+  componentDidUpdate =() => {
+    this.scrollToBottom();;
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener(
+      "resize",
+      this.updateWindowDimensions.bind(this)
+    );
+  }
+
+  updateWindowDimensions() {
+    this.setState({ height: window.innerHeight, width: window.innerWidth });
   }
 
   sendMessage = e => {
     const { chat } = this.props;
-    const { user } = this.props;
     const { newMessage } = this.state;
     const data = {
       chatId: chat._id,
-      message: {
-        email: user.email,
-        username: user.username,
-        message: newMessage,
-        timeStamp: new Date()
-      }
+      userId: this.props.user.id,
+      message: newMessage,
+      timeStamp: new Date()
     };
-    this.props.socket.emit("new message", data);
+    this.props.socket.emit("new-message", data);
     this.setState({ newMessage: "" });
   };
 
@@ -60,80 +89,58 @@ class Chat extends Component {
     this.setState({ newMessage: e.target.value });
   };
 
-  msgHeight = e => {
-    this.setState({ textarea: e.scrollHeight });
-    //this.text = e.scrollHeight;
-  };
-
-  sendMessageStyle = {
-    position: "fixed",
-    bottom: 0,
-    width: "70%",
-    height: "100vh" /* Magic here */,
-    display: "flex",
-    "justify-content": "center",
-    "align-items": "flex-end"
-  };
-
-  messageStyles: {
-    marginBottom: "10em"
-  };
-
   updateTextareaHeight = e => {
-    console.log(this.textInput.current.scrollHeight);
     this.setState({ textareaHeight: this.textInput.current.scrollHeight });
   };
 
+  BackStyles = {
+    'margin-left': 'auto',
+    'margin-right': 'auto',
+    'width': '20%'
+  }
+
   render() {
     return (
-      <div style={{ marginBottom: "4em" }}>
+      <div height={{ height: "100%" }}>
         <Row className="justify-content-md-center">
           <Col xs={12} md={8}>
-            <ButtonToolbar>
+            <ButtonToolbar styles={this.buttonStyles}>
               <Button variant="primary" onClick={this.props.goHome}>
-                Chats
+                Back
               </Button>
             </ButtonToolbar>
           </Col>
         </Row>
-        <Row className="justify-content-md-center">
+        <h4 className="text-center">{this.props.chat.chatName}</h4>
+        <Row
+          className="justify-content-md-center"
+          style={{
+            overflow: "scroll",
+            width: "auto",
+            height: this.state.height / 2 + "px"
+          }}
+        >
           <Col xs={12} md={8}>
-            <h4 className="text-center">{this.props.chat.chatName}</h4>
             {this.props.chat.messages.map((data, i) => {
               return (
-                <InputGroup key={i} className="mb-3">
-                  <InputGroup.Prepend>
-                    <InputGroup.Text id="basic-addon3">
-                      {data.username}
-                    </InputGroup.Text>
-                  </InputGroup.Prepend>
-                  <FormControl
-                    as="textarea"
-                    id="basic-url"
-                    aria-describedby="basic-addon3"
-                    value={data.message}
-                    disabled
-                  />
-                </InputGroup>
+                <Message
+                  key={i}
+                  username={this.props.members[data.userId]}
+                  message={data.message}
+                  value={data.message}
+                />
               );
             })}
-            {this.state.newMessages.map((data, i) => {
-              return (
-                <InputGroup key={i} className="mb-3">
-                  <InputGroup.Prepend>
-                    <InputGroup.Text id="basic-addon3">
-                      {data.username}
-                    </InputGroup.Text>
-                  </InputGroup.Prepend>
-                  <FormControl
-                    id="basic-url"
-                    aria-describedby="basic-addon3"
-                    value={data.message}
-                    disabled
-                  />
-                </InputGroup>
-              );
-            })}
+            <PreviewMessage
+              socket={this.props.socket}
+              scrollToBottom={this.scrollToBottom}
+            />
+            <div
+              style={{ float: "left", clear: "both" }}
+              ref={el => {
+                this.messagesEnd = el;
+              }}
+            />
           </Col>
         </Row>
 
@@ -145,6 +152,11 @@ class Chat extends Component {
             <InputGroup className="mb-3" onSubmit={this.sendMessage}>
               <FormControl
                 autoFocus
+                onKeyUp={this.props.socket.emit("preview-message", {
+                  message: this.state.newMessage,
+                  username: this.props.user.username,
+                  chatId: this.props.chat._id
+                })}
                 aria-describedby="basic-addon1"
                 placeholder="Message"
                 value={this.state.newMessage}

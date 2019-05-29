@@ -6,6 +6,9 @@ import FormControl from "react-bootstrap/FormControl";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import ButtonToolbar from "react-bootstrap/Row";
+import UpdateChatName from "../UpdateChatName";
+import ChangeChatOwner from "../ChangeChatOwner";
+import ChangeUsername from "../ChangeUsername";
 
 class Main extends Component {
   constructor(props) {
@@ -19,13 +22,17 @@ class Main extends Component {
       chats: [],
       join: false,
       newChatOwner: "",
-      chatsToJoin: []
+      chatsToJoin: [],
+      changeChatName: [],
+      changeChatOwner: [],
+      changeUsername: false
     };
   }
 
   componentDidMount() {
     this._isMounted = true;
-    this.getChats();
+    this.props.getChats();
+    this.setState({ username: this.props.user.username });
     // listens for when someone enters the username of a user who owns
     // a chat that they want to join and returns each of their chats
     // and stores it in state
@@ -41,81 +48,27 @@ class Main extends Component {
   /* sets data as the name of the new chat and creates the new chat */
   handleCreateNewChatSubmit = () => {
     let data = { chatName: this.state.newChatName };
-    this.createNewChat(data);
+    this.setState({ newChat: false, newChatName: "" });
+    this.props.createNewChat(data);
   };
 
   /* Gets the other user's chats */
   getOtherChats = () => {
     this.newChatOwner = this.state.newChatOwner;
-    let data = { ownerUsername: this.state.newChatOwner };
+    let data = { username: this.state.newChatOwner };
     this.props.socket.emit("get chats", data);
   };
 
   /* Join a chat that already exists */
   joinChat = e => {
-    e.persist();
-    // get the chat name and chat id from the button */
     let holder = e.target.name.split("_");
-    const data = { chatName: holder[0], chatId: holder[1] };
-    fetch("/join", {
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      body: JSON.stringify(data)
-    })
-      .then(res => res.json())
-      .then(res => {
-        const chat = res.newChat;
-        // if successfully joined, add new chat to chats in States
-        // and clear the join, chatsToJoin, and newChatOwner properties
-        if (res.success && this._isMounted) {
-          this.setState((prevState, props) => {
-            return {
-              chats: prevState.chats.concat([
-                {
-                  chatName: chat.chatName,
-                  chatId: chat.chatId,
-                  ownerUsername: this.state.newChatOwner
-                }
-              ]),
-              join: false,
-              newChatOwner: "",
-              chatsToJoin: []
-            };
-          });
-        } else console.log(res.error);
-      });
-  };
-
-  /* Creates a new chat and adds it to the user */
-  createNewChat = data => {
-    fetch("/createChat", {
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      body: JSON.stringify(data)
-    })
-      .then(res => res.json())
-      .then(res => {
-        const { chat } = res;
-        if (res.success && this._isMounted) {
-          this.setState((prevState, props) => {
-            return {
-              // if successful add chat and clear state appropiate state properties
-              chats: prevState.chats.concat([
-                {
-                  chatName: chat.chatName,
-                  chatId: chat._id,
-                  ownerUsername: chat.ownerUsername
-                }
-              ]),
-              newChat: false,
-              newChatName: ""
-            };
-          });
-        } else {
-          console.log(res.error);
-        }
-      })
-      .catch(err => console.log(err));
+    const data = {
+      chatName: holder[0],
+      chatId: holder[1],
+      ownerUsername: this.newChatOwner
+    };
+    this.props.joinChat(data);
+    this.setState({ join: false, newChatOwner: "", chatsToJoin: [] });
   };
 
   /*  update the state property for the name of the chat to create  */
@@ -128,39 +81,6 @@ class Main extends Component {
   updateNewChatOwner = e => {
     e.persist();
     this.setState({ newChatOwner: e.target.value });
-  };
-
-  getChats = () => {
-    fetch("/getChats", {
-      header: { "Content-Type": "application/json" },
-      method: "GET"
-    })
-      .then(res => res.json())
-      .then(res => {
-        let chats = [];
-        if (res.success && this._isMounted) {
-          res.chats.forEach(chat => {
-            chats.push({
-              chatName: chat.chatName,
-              chatId: chat._id,
-              ownerUsername: chat.ownerUsername
-            });
-          });
-          this.setState((prevState, props) => {
-            return {
-              chats: prevState.chats.concat(chats),
-              newChat: false,
-              newChatName: ""
-            };
-          });
-        }
-      })
-      .catch(err => console.log(err));
-  };
-
-  simulateClick = e => {
-    console.log(e);
-    e.click();
   };
 
   /* Handle scenario when user clicks on chat to enter */
@@ -180,8 +100,7 @@ class Main extends Component {
       .then(res => {
         // chat was found and returned
         if (res.success && this._isMounted) {
-          //console.log(res.chat);
-          this.props.handleEnterChat(res.chat);
+          this.props.handleEnterChat(res.chat, res.members);
         }
       })
       .catch(err => console.log(err));
@@ -206,6 +125,55 @@ class Main extends Component {
     marginBottom: "2em"
   };
 
+  enableChangeChatOwner = e => {
+    let update = [];
+    this.props.chats.forEach(chat => {
+      update.push(false);
+    });
+    update[e.target.name] = true;
+    this.setState({ changeChatOwner: update });
+  };
+
+  cancelChangeChatOwner = e => {
+    this.setState({ changeChatOwner: [] });
+  };
+
+  handleNewChatOwner = () => {
+    this.props.getChats();
+    this.setState({ changeChatOwner: [] });
+  };
+
+  enableChangeUsername = e => {
+    this.setState({ changeUsername: true });
+  };
+
+  changeUsername = username => {
+    this.setState({ username: username, changeUsername: false });
+    this.props.handleUsernameChange(username);
+  };
+
+  cancelChangeUsername = () => {
+    this.setState({ changeUsername: false });
+  };
+
+  handleChatNameChange = () => {
+    this.props.getChats();
+    this.setState({ changeChatName: [] });
+  };
+
+  cancelChatNameChange = () => {
+    this.setState({ changeChatName: [] });
+  };
+
+  enableChatNameChange = e => {
+    let update = [];
+    this.props.chats.forEach(chat => {
+      update.push(false);
+    });
+    update[e.target.name] = true;
+    this.setState({ changeChatName: update });
+  };
+
   render() {
     let hidden = "hidden";
     if (this.state.chatsToJoin.length) {
@@ -216,7 +184,7 @@ class Main extends Component {
       <div>
         <Row className="justify-content-md-center">
           <Col xs={12} md={8} style={this.inputGroupStyle}>
-            <h3 className="text-center">{this.props.user.username}</h3>
+            <h3 className="text-center">{this.props.user.username} </h3>
             <InputGroup
               className="mb-3"
               onSubmit={this.handleCreateNewChatSubmit}
@@ -302,8 +270,21 @@ class Main extends Component {
         </Row>
         <Row className="justify-content-md-center">
           <Col xs={12} md={8}>
+            <Button variant="primary" onClick={this.enableChangeUsername}>
+              Change Username
+            </Button>
+          </Col>
+        </Row>
+        {this.state.changeUsername ? (
+          <ChangeUsername
+            update={this.changeUsername}
+            cancel={this.cancelChangeUsername}
+          />
+        ) : null}
+        <Row className="justify-content-md-center">
+          <Col xs={12} md={8}>
             <h4 className="text-center">Chats</h4>
-            {this.state.chats
+            {this.props.chats
               .slice(0)
               .reverse()
               .map((chat, i) => {
@@ -311,8 +292,9 @@ class Main extends Component {
                   <Card key={i} style={this.cardStyle}>
                     <Card.Body>
                       <Card.Title>{chat.chatName}</Card.Title>
-                      <Card.Text>Owner: {chat.ownerUsername}</Card.Text>
-                      <Card.Text>Id: {chat.chatId}</Card.Text>
+                      {this.props.user.id === chat.owner ? (
+                        <h1>Owner</h1>
+                      ) : null}
                       <Button
                         variant="primary"
                         name={chat.chatName + "_" + chat.chatId}
@@ -320,6 +302,52 @@ class Main extends Component {
                       >
                         Enter
                       </Button>
+                      <Button
+                        variant="primary"
+                        name={chat.chatId}
+                        onClick={this.props.handleLeaveChat}
+                      >
+                        Leave
+                      </Button>
+                      {this.props.user.id === chat.owner ? (
+                        <div>
+                          <Button
+                            variant="primary"
+                            name={chat.chatId}
+                            onClick={this.props.handleChatDelete}
+                          >
+                            Delete
+                          </Button>
+                          <Button
+                            name={i}
+                            variant="primary"
+                            onClick={this.enableChatNameChange}
+                          >
+                            Rename
+                          </Button>
+                          {this.state.changeChatName[i] === true ? (
+                            <UpdateChatName
+                              chatId={chat.chatId}
+                              update={this.handleChatNameChange}
+                              cancel={this.cancelChatNameChange}
+                            />
+                          ) : null}
+                          <Button
+                            variant="primary"
+                            name={i}
+                            onClick={this.enableChangeChatOwner}
+                          >
+                            Change Owner
+                          </Button>
+                          {this.state.changeChatOwner[i] === true ? (
+                            <ChangeChatOwner
+                              chatId={chat.chatId}
+                              update={this.handleNewChatOwner}
+                              cancel={this.cancelChangeChatOwner}
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
                     </Card.Body>
                   </Card>
                 );

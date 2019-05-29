@@ -4,18 +4,16 @@ const { Schema } = mongoose;
 
 /* message format */
 const MessageSchema = new Schema({
-  email: String,
-  username: String,
+  userId: String,
   message: String,
   timeStamp: { type: Date, default: Date.now }
 });
 
 const ChatSchema = new Schema({
+  chatName: String,
   chatId: String,
-  chatName: String, // chat's name
-  ownerUsername: String,  // owner's username
-  ownerEmail: String,     // owner's email
-  members: [{email: String, username: String}],  // member's usernames
+  owner: String,
+  members: [],  // member's usernames
   messages: [MessageSchema]
 });
 

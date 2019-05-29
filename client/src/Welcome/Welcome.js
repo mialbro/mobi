@@ -38,7 +38,7 @@ class Welcome extends Component {
           });
         }
       })
-      .catch(err => console.log("error: ", err));
+      .catch(err => alert(err));
   };
 
   // login / create account
@@ -58,19 +58,23 @@ class Welcome extends Component {
     })
       .then(res => res.json())
       .then(data => {
-        if (state.createAccount) {
-          if (data.duplicate === true || data.suceess === false)
-            this.setState({ createAccount: true });
-          else this.setState({ createAccount: false });
-        } else if (!state.createAccount) {
-          if (data.success === true) this.props.handleLogin(data);
-          else {
-            this.setState({ errorMessage: data.message });
+        if (data.success) {
+          if (state.createAccount) {
+            if (data.duplicate === true || data.suceess === false)
+              this.setState({ createAccount: true });
+            else this.setState({ createAccount: false });
+          } else if (!state.createAccount) {
+            if (data.success === true) this.props.handleLogin(data);
+            else {
+              this.setState({ errorMessage: data.message });
+            }
           }
+        } else {
+          alert("Username Taken");
         }
       })
       .catch(error => {
-        console.log("ERROR: ", error);
+        alert("error", error);
       });
   };
 
@@ -82,7 +86,7 @@ class Welcome extends Component {
       password: state.password
     };
     let url = "";
-    if (state.createAccount) url = "/createAccount";
+    if (state.createAccount) url = "/create-account";
     else url = "/login";
     this.postData(url, data);
     e.preventDefault();
