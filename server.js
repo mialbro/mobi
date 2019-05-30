@@ -91,18 +91,59 @@ const deleteChat = chatId => {
   });
 };
 
+let usersOnline = {};
+
 // Client has connected
 io.on("connection", socket => {
   socket.emit("connected");
+
+  /* someone has entered the chat */
+  socket.on("user-entered-chat", data => {
+    socket.join(data.chatId);
+    socket.username = data.username;
+    socket.chatId = data.chatId;
+    socket.broadcast.to(data.chatId).emit("user-entered-chat", data);
+    if (!usersOnline[data.chatId])
+      usersOnline[data.chatId] = [];
+    usersOnline[data.chatId].push( data.username );
+    socket.emit("users-online", usersOnline);
+
+  });
 
   // once user has entered chat set the chat id
   // as the socket id since we will have to broadcast
   // and we don't want to send messages to people in other
   // chats
-  socket.on("chat online", data => {
-    socket.join(data.chatId);
-    socket.broadcast.to(data.chatId).emit("chat online", data.userId);
+
+
+
+  /* Send what the members are typing to everyone else in the chat */
+  socket.on("preview-message", data => {
+    socket.broadcast.to(data.chatId).emit("preview-message", data);
   });
+
+  socket.on("disconnect", () => {
+    if (usersOnline[socket.chatId] !== undefined)
+      usersOnline[socket.chatId].splice(usersOnline[socket.chatId].indexOf(socket.username), 1);
+    socket.broadcast.to(socket.chatId).emit("user-left-chat", {
+      username: socket.username,
+      chatId: socket.chatId
+    });
+  });
+
+  socket.on("left-chat", () => {
+    if (usersOnline[socket.chatId] !== undefined)
+      usersOnline[socket.chatId].splice(usersOnline[socket.chatId].indexOf(socket.username), 1);
+    socket.broadcast.to(socket.chatId).emit("user-left-chat", {
+      username: socket.username,
+      chatId: socket.chatId
+    });
+  });
+
+  /* Send what the members are typing to everyone else in the chat */
+  //socket.on("show-message-preview-box", data => {
+    //socket.broadcast.to(data.chatId).emit("show-message-preview-box", data);
+  //});
 
   ////////////////////////////////////////////////////////////////
 
@@ -310,10 +351,7 @@ io.on("connection", socket => {
     });
   });
 
-  /* Send what the members are typing to everyone else in the chat */
-  socket.on("preview-message", data => {
-    socket.broadcast.to(data.chatId).emit("preview-message", data);
-  });
+
 
   /*  Check to see if user cookies are stored in browser */
   app.get("/user", (req, res, next) => {
@@ -347,14 +385,15 @@ io.on("connection", socket => {
         else if (chat === null) return res.send({ success: false });
         else {
           chat.members.push(req.user._id);
-          chat.save();
-          const newChat = chat._id;
-          req.user.chats.push(chat._id);
-          req.user.save(err => {
-            if (err) return res.send({ success: false });
-            else {
-              return res.send({ success: true, newChat });
-            }
+          chat.save((err, savedChat) => {
+            const newChat = chat._id;
+            req.user.chats.push(chat._id);
+            req.user.save((err, user) => {
+              if (err) return res.send({ success: false });
+              else {
+                return res.send({ success: true, savedChat });
+              }
+            });
           });
         }
       });

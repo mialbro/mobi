@@ -9,46 +9,49 @@ class PreviewMessage extends Component {
   }
 
   componentDidMount() {
-    this.props.socket.on("preview-message", data => {
-      this.previewMessage(data);
+
+    this.props.socket.on("users-online", data => {
+      let { messages } = this.state;
+      (data[this.props.chatId]).forEach(user => {
+        if (user !== this.props.username)
+          messages[user] = '';
+      });
+      this.setState( { messages: messages } );
       this.props.scrollToBottom();
+    });
+
+    this.props.socket.on("preview-message", data => {
+      let { messages } = this.state;
+      messages[data.username] = data.message;
+      this.setState( { messages: messages } );
+      //this.props.scrollToBottom();
+    });
+
+    // lost text focus
+    this.props.socket.on("user-left-chat", data => {
+      let { messages } = this.state;
+      delete messages[data.username];
+      this.setState( { messages: messages } );
+    })
+
+    this.props.socket.on("user-entered-chat", data => {
+      let { messages } = this.state;
+      messages[data.username] = '';
+      this.setState ( { messages: messages } );
+      try {
+        this.props.scrollToBottom();
+      }
+      catch {
+        
+      }
+
     });
   }
 
-  /* Show all of the users what each person is typing */
-  previewMessage = data => {
-    let { messages } = this.state;
-    // if text has not changed return early
-    //if (messages[data.username] === data.message)
-    //return;
+  componentDidUpdate() {
 
-    // if all of the text was removed, hide the message preview
-    if (data.message.length === 0) {
-      delete messages[data.username];
-      this.setState({ messages: messages });
-      return;
-    }
-
-    // update the message preview
-    else {
-      // reset timer so message preview will be shown for 2 seconds
-      clearTimeout(this.timer[data.username]);
-      messages[data.username] = data.message;
-      //times[data.username] = Date.now();
-    }
-    // update the message and clear it in 2 seconds
-    this.setState(
-      prevState => ({
-        messages: messages
-      }),
-      () => {
-        this.timer[data.username] = setTimeout(() => {
-          delete messages[data.username];
-          this.setState({ messages: messages });
-        }, 2000);
-      }
-    );
-  };
+  }
+  previewMessage = data => { };
 
   style = {
     //'position': 'absolute'

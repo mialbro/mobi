@@ -49,8 +49,8 @@ class Main extends Component {
   /* sets data as the name of the new chat and creates the new chat */
   handleCreateNewChatSubmit = () => {
     let data = { chatName: this.state.newChatName };
-    this.setState({ newChat: false, newChatName: "" });
     this.props.createNewChat(data);
+    this.setState({ newChat: false, newChatName: "" });
   };
 
   /* Gets the other user's chats */
@@ -190,7 +190,7 @@ class Main extends Component {
               className="mb-3"
               onSubmit={this.handleCreateNewChatSubmit}
             >
-              
+
               <FormControl
                 autoFocus
                 aria-describedby="basic-addon1"
@@ -211,7 +211,7 @@ class Main extends Component {
               </InputGroup.Prepend>
             </InputGroup>
 
-            
+
             <InputGroup className="mb-3" style={this.inputGroupStyle}>
               <FormControl
                 value={this.state.newChatOwner}

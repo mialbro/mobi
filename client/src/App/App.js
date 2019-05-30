@@ -102,6 +102,7 @@ class App extends Component {
               members: res.members
             };
           });
+          this.getChats();
         } else {
           console.log(res.error);
         }
@@ -125,11 +126,12 @@ class App extends Component {
 
         if (res.success) {
           const chat = {
-            chatName: newChat.chatName,
-            chatId: newChat.chatId,
-            ownerUsername: data.newChatOwner
+            chatName: res.savedChat.chatName,
+            chatId: res.savedChat._id,
+            owner: res.savedChat.owner
           };
-          this.setState({ chats: this.state.chats.concat(chat) });
+          this.getChats();
+          //this.setState({ chats: this.state.chats.concat(chat) });
         } else console.log(res.error);
       });
   };

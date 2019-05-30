@@ -23,24 +23,26 @@ class Chat extends Component {
   }
 
   scrollToBottom = () => {
-    this.messagesEnd.scrollIntoView({ behavior: "smooth" });
+    try {
+      this.messagesEnd.scrollIntoView({ behavior: "smooth" });
+    } catch (e) {
+
+    }
   };
 
   componentDidMount() {
     this.scrollToBottom();
     // send chat id to server to create private message flow
-    this.props.socket.emit("chat online", {
+    this.props.socket.emit("user-entered-chat", {
       chatId: this.props.chat._id,
-      userId: this.props.user.id
+      userId: this.props.user.id,
+      username: this.props.user.username
     });
+
     this.props.socket.on("message-sent", message => {
       this.scrollToBottom();
       this.props.handleNewMessage(message);
       //this.addMessage(data);
-    });
-
-    this.props.socket.on("chat online", user => {
-      this.props.handleUserOnline(user);
     });
 
     this.props.socket.on("error sending message", () => {});
@@ -93,6 +95,11 @@ class Chat extends Component {
     this.setState({ textareaHeight: this.textInput.current.scrollHeight });
   };
 
+  leaveChat = () => {
+    this.props.socket.emit("left-chat");
+    this.props.goHome();
+  }
+
   BackStyles = {
     'margin-left': 'auto',
     'margin-right': 'auto',
@@ -105,7 +112,7 @@ class Chat extends Component {
         <Row className="justify-content-md-center">
           <Col xs={12} md={8}>
             <ButtonToolbar styles={this.buttonStyles}>
-              <Button variant="primary" onClick={this.props.goHome}>
+              <Button variant="primary" onClick={this.leaveChat}>
                 Back
               </Button>
             </ButtonToolbar>
@@ -132,6 +139,8 @@ class Chat extends Component {
               );
             })}
             <PreviewMessage
+              username={this.props.user.username}
+              chatId={this.props.chat._id}
               socket={this.props.socket}
               scrollToBottom={this.scrollToBottom}
             />
