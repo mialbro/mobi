@@ -184,16 +184,16 @@ class Main extends Component {
       <div>
         <Row className="justify-content-md-center">
           <Col xs={12} md={8} style={this.inputGroupStyle}>
-            <h3 className="text-center">{this.props.user.username} </h3>
+            <h3 className="text-center">username: {this.props.user.username} </h3>
             <InputGroup
               className="mb-3"
-              onSubmit={this.handleCreateNewChatSubmit}
+
             >
 
               <FormControl
                 autoFocus
                 aria-describedby="basic-addon1"
-                placeholder="Chat Name"
+                placeholder="create new chat"
                 value={this.state.newChatName}
                 onChange={this.updateNewChatName}
                 onKeyUp={e =>
@@ -217,14 +217,14 @@ class Main extends Component {
                 onChange={this.updateNewChatOwner}
                 onKeyUp={e => (e.keyCode === 13 ? this.getOtherChats() : null)}
                 aria-describedby="basic-addon1"
-                placeholder="Member's Username"
+                placeholder="enter your friend's username"
               />
               <InputGroup.Append>
                 <Button
                   variant="outline-secondary"
                   onClick={this.getOtherChats}
                 >
-                  Join (+)
+                  Search
                 </Button>
               </InputGroup.Append>
             </InputGroup>

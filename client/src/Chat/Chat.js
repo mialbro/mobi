@@ -118,7 +118,8 @@ class Chat extends Component {
             </ButtonToolbar>
           </Col>
         </Row>
-        <h4 className="text-center">{this.props.chat.chatName}</h4>
+        <h3 className="text-center">chat: {this.props.chat.chatName}</h3>
+        <h3 className="text-center">username: {this.props.user.username} </h3>
         <Row
           className="justify-content-md-center"
           style={{
