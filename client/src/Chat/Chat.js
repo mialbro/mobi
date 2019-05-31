@@ -42,7 +42,6 @@ class Chat extends Component {
     this.props.socket.on("message-sent", message => {
       this.scrollToBottom();
       this.props.handleNewMessage(message);
-      //this.addMessage(data);
     });
 
     this.props.socket.on("error sending message", () => {});
@@ -76,14 +75,6 @@ class Chat extends Component {
     };
     this.props.socket.emit("new-message", data);
     this.setState({ newMessage: "" });
-  };
-
-  addMessage = data => {
-    this.setState((prevState, props) => {
-      return {
-        newMessages: prevState.newMessages.concat([data])
-      };
-    });
   };
 
   updateMessage = e => {
@@ -159,7 +150,7 @@ class Chat extends Component {
           style={{ marginLeft: "auto", marginRight: "auto", bottom: 0 }}
         >
           <Col xs={12} md={8}>
-            <InputGroup className="mb-3" onSubmit={this.sendMessage}>
+            <InputGroup className="mb-3" >
               <FormControl
                 autoFocus
                 onKeyUp={this.props.socket.emit("preview-message", {

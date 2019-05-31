@@ -1,9 +1,10 @@
 const express = require("express");
-const router = express.Router();
+const fs = require("fs");
 const app = express();
-const server = require("http").Server(app);
-var passport = require("passport");
-var Strategy = require("passport-local").Strategy;
+const http = require("http");
+const server = http.createServer(app);
+const passport = require("passport");
+const Strategy = require("passport-local").Strategy;
 const path = require("path");
 
 const io = require("socket.io")(server);
@@ -44,7 +45,7 @@ passport.use(
 
 if (process.env.PORT !== 5000) {
   // Serve static files from the React app
-  app.use(express.static(path.join(__dirname, 'client/build')));
+  app.use(express.static(path.join(__dirname, "client/build")));
 }
 
 // Serve static files from the React app
@@ -97,66 +98,28 @@ let usersOnline = {};
 io.on("connection", socket => {
   socket.emit("connected");
 
-  socket.on("username-changed", (userId) => {
+  socket.on("username-changed", userId => {
     // find the user who just changed his username
-    User.findById(userId,
-        (err, user) => {
-          // get all of the chats that the user is a part of
-          Chat.find(
-            { _id: { $in: user.chats } },
-            (err, chats) => {
-              // loop through all his chats
-              for (let i = 0; i < chats.length; i++) {
-                // for each of his chats get all of the members
-                User.find(
-                  { _id: { $in: chats[i].members } },
-                  (err, users) => {
-                    let members = {};
-                    // loop through all of the members and store
-                    // them as an object
-                    // key(_id): value(username)
-                    for (let j = 0; j < users.length; j++) {
-                      members[users[j]._id] = users[j].username;
-                    }
-                    socket.broadcast.to( chats[i]._id ).emit("return-members", members );
-                  }
-                )
-              }
+    User.findById(userId, (err, user) => {
+      // get all of the chats that the user is a part of
+      Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
+        // loop through all his chats
+        for (let i = 0; i < chats.length; i++) {
+          // for each of his chats get all of the members
+          User.find({ _id: { $in: chats[i].members } }, (err, users) => {
+            let members = {};
+            // loop through all of the members and store
+            // them as an object
+            // key(_id): value(username)
+            for (let j = 0; j < users.length; j++) {
+              members[users[j]._id] = users[j].username;
             }
-          )
-        })
-  })
-
-/*
-  socket.on("username-changed", () => {
-    // Find the chat with the corresponding chatId
-    User.findOne(
-      { username: socket.username},
-      (err, user) => {
-        Chat.find(
-          { _id: { $in: user.chats } },
-          (err, chats) => {
-            User.find()
-          }
-        )
-      }
-    )
-    Chat.findOne({ _id: req.body.chatId }, (err, chat) => {
-      // if there was an error or the chat does not exist
-      if (err || chat === null) res.send({ success: false });
-      // chat was found
-      else {
-        User.find({ _id: { $in: chat.members } }, (err, users) => {
-          let members = {};
-          users.forEach(user => {
-            members[user._id] = user.username;
+            socket.broadcast.to(chats[i]._id).emit("return-members", members);
           });
-          res.send({ success: true, chat, members });
-        });
-      }
+        }
+      });
     });
-  })
-  */
+  });
 
   /* someone has entered the chat */
   socket.on("user-entered-chat", data => {
@@ -164,19 +127,15 @@ io.on("connection", socket => {
     socket.username = data.username;
     socket.chatId = data.chatId;
     socket.broadcast.to(data.chatId).emit("user-entered-chat", data);
-    if (!usersOnline[data.chatId])
-      usersOnline[data.chatId] = [];
-    usersOnline[data.chatId].push( data.username );
+    if (!usersOnline[data.chatId]) usersOnline[data.chatId] = [];
+    usersOnline[data.chatId].push(data.username);
     socket.emit("users-online", usersOnline);
-
   });
 
   // once user has entered chat set the chat id
   // as the socket id since we will have to broadcast
   // and we don't want to send messages to people in other
   // chats
-
-
 
   /* Send what the members are typing to everyone else in the chat */
   socket.on("preview-message", data => {
@@ -185,7 +144,10 @@ io.on("connection", socket => {
 
   socket.on("disconnect", () => {
     if (usersOnline[socket.chatId] !== undefined)
-      usersOnline[socket.chatId].splice(usersOnline[socket.chatId].indexOf(socket.username), 1);
+      usersOnline[socket.chatId].splice(
+        usersOnline[socket.chatId].indexOf(socket.username),
+        1
+      );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
       chatId: socket.chatId
@@ -194,7 +156,10 @@ io.on("connection", socket => {
 
   socket.on("left-chat", () => {
     if (usersOnline[socket.chatId] !== undefined)
-      usersOnline[socket.chatId].splice(usersOnline[socket.chatId].indexOf(socket.username), 1);
+      usersOnline[socket.chatId].splice(
+        usersOnline[socket.chatId].indexOf(socket.username),
+        1
+      );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
       chatId: socket.chatId
@@ -203,7 +168,7 @@ io.on("connection", socket => {
 
   /* Send what the members are typing to everyone else in the chat */
   //socket.on("show-message-preview-box", data => {
-    //socket.broadcast.to(data.chatId).emit("show-message-preview-box", data);
+  //socket.broadcast.to(data.chatId).emit("show-message-preview-box", data);
   //});
 
   ////////////////////////////////////////////////////////////////
@@ -283,8 +248,7 @@ io.on("connection", socket => {
     User.findOne({ username: data.username }, (err, user) => {
       if (user) {
         Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
-          if (chats.length)
-            socket.emit("got other chats", chats);
+          if (chats.length) socket.emit("got other chats", chats);
         });
       }
     });
@@ -313,10 +277,12 @@ io.on("connection", socket => {
         // find the other members and send user info to the front end
         User.find({ _id: { $in: chat.members } }, (err, users) => {
           let x = [];
-          users.forEach(user => {
-            x.push(user.username);
-          });
-          res.send({ success: false, message: "owner", members: x });
+          if (users.length) {
+            users.forEach(user => {
+              x.push(user.username);
+            });
+            res.send({ success: false, message: "owner cannot leave chat. first change owner", members: x });
+          }
         });
       }
       // you are the only member left in the chat
@@ -411,8 +377,6 @@ io.on("connection", socket => {
       });
     });
   });
-
-
 
   /*  Check to see if user cookies are stored in browser */
   app.get("/user", (req, res, next) => {
