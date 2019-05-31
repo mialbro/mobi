@@ -9,7 +9,6 @@ import ButtonToolbar from "react-bootstrap/Row";
 import UpdateChatName from "../UpdateChatName";
 import ChangeChatOwner from "../ChangeChatOwner";
 import ChangeUsername from "../ChangeUsername";
-import Form from "react-bootstrap/Form";
 
 class Main extends Component {
   constructor(props) {

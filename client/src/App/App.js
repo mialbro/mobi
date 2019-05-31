@@ -28,6 +28,10 @@ class App extends Component {
   componentDidMount() {
     this.socket = io();
 
+    this.socket.on("return-members", (data) => {
+      this.setState( { members: data } );
+    })
+
     // Update chat list if a chat was deleted
     // And the user has not refreshed their screen
     this.socket.on("chat-deleted", data => {
@@ -120,16 +124,10 @@ class App extends Component {
     })
       .then(res => res.json())
       .then(res => {
-        const { newChat } = res;
         // if successfully joined, add new chat to chats in States
         // and clear the join, chatsToJoin, and newChatOwner properties
 
         if (res.success) {
-          const chat = {
-            chatName: res.savedChat.chatName,
-            chatId: res.savedChat._id,
-            owner: res.savedChat.owner
-          };
           this.getChats();
           //this.setState({ chats: this.state.chats.concat(chat) });
         } else console.log(res.error);
@@ -193,6 +191,7 @@ class App extends Component {
 
   handleUsernameChange = username => {
     this.setState({ username: username });
+    this.socket.emit("username-changed", this.state.id);
   };
 
   handleNewMessage = message => {

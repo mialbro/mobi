@@ -97,6 +97,67 @@ let usersOnline = {};
 io.on("connection", socket => {
   socket.emit("connected");
 
+  socket.on("username-changed", (userId) => {
+    // find the user who just changed his username
+    User.findById(userId,
+        (err, user) => {
+          // get all of the chats that the user is a part of
+          Chat.find(
+            { _id: { $in: user.chats } },
+            (err, chats) => {
+              // loop through all his chats
+              for (let i = 0; i < chats.length; i++) {
+                // for each of his chats get all of the members
+                User.find(
+                  { _id: { $in: chats[i].members } },
+                  (err, users) => {
+                    let members = {};
+                    // loop through all of the members and store
+                    // them as an object
+                    // key(_id): value(username)
+                    for (let j = 0; j < users.length; j++) {
+                      members[users[j]._id] = users[j].username;
+                    }
+                    socket.broadcast.to( chats[i]._id ).emit("return-members", members );
+                  }
+                )
+              }
+            }
+          )
+        })
+  })
+
+/*
+  socket.on("username-changed", () => {
+    // Find the chat with the corresponding chatId
+    User.findOne(
+      { username: socket.username},
+      (err, user) => {
+        Chat.find(
+          { _id: { $in: user.chats } },
+          (err, chats) => {
+            User.find()
+          }
+        )
+      }
+    )
+    Chat.findOne({ _id: req.body.chatId }, (err, chat) => {
+      // if there was an error or the chat does not exist
+      if (err || chat === null) res.send({ success: false });
+      // chat was found
+      else {
+        User.find({ _id: { $in: chat.members } }, (err, users) => {
+          let members = {};
+          users.forEach(user => {
+            members[user._id] = user.username;
+          });
+          res.send({ success: true, chat, members });
+        });
+      }
+    });
+  })
+  */
+
   /* someone has entered the chat */
   socket.on("user-entered-chat", data => {
     socket.join(data.chatId);
@@ -170,6 +231,8 @@ io.on("connection", socket => {
 
   /* Logs the user in */
   app.post("/login", passport.authenticate("local"), (req, res) => {
+    socket.username = req.user.username;
+    socket.userId = req.user._id;
     res.send({
       success: true,
       message: "authentication succeeded",
@@ -193,11 +256,10 @@ io.on("connection", socket => {
   /*  Creates A Chat Room  and returns the name of the new chat room and the unique id */
   app.post("/create-chat", (req, res) => {
     const chatName = req.body.chatName;
-    if (chatName.length < 4)
-      return res.send({
-        success: false,
-        error: "chat name must be at least 4 characters"
-      });
+    return res.send({
+      success: false,
+      error: "chat name must be at least 4 characters"
+    });
     // Create new chat
     const chat = new Chat({
       chatName: chatName,
@@ -223,9 +285,12 @@ io.on("connection", socket => {
   /* Returns all of the selected users chats */
   socket.on("get chats", data => {
     User.findOne({ username: data.username }, (err, user) => {
-      Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
-        socket.emit("got other chats", chats);
-      });
+      if (user) {
+        Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
+          if (chats.length)
+            socket.emit("got other chats", chats);
+        });
+      }
     });
   });
 

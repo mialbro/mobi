@@ -3,10 +3,20 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 
 class UpdateChatName extends Component {
+  _isMounted = false;
   constructor(props) {
     super(props);
     this.state = { newUsername: "", duplicateUsername: false };
   }
+
+  componentDidMount() {
+    this._isMounted = true;
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
   /* Change the username */
   changeUsername = () => {
     fetch("/change-username", {
@@ -19,7 +29,8 @@ class UpdateChatName extends Component {
         // username successfully changed
         if (res.success === true) {
           this.props.update(this.state.newUsername);
-          this.setState({ newUsername: "", duplicateUsername: false });
+          if (this._isMounted)
+            this.setState({ newUsername: "", duplicateUsername: false });
         }
         // duplicate username
         else {
@@ -30,11 +41,13 @@ class UpdateChatName extends Component {
 
   updateNameChange = e => {
     e.persist();
-    this.setState({ newUsername: e.target.value });
+    if (this._isMounted)
+      this.setState({ newUsername: e.target.value });
   };
 
   cancel = () => {
-    this.setState({ newUsername: "" });
+    if (this._isMounted)
+      this.setState({ newUsername: "" });
     this.props.cancel();
   };
 
