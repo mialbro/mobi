@@ -256,10 +256,6 @@ io.on("connection", socket => {
   /*  Creates A Chat Room  and returns the name of the new chat room and the unique id */
   app.post("/create-chat", (req, res) => {
     const chatName = req.body.chatName;
-    return res.send({
-      success: false,
-      error: "chat name must be at least 4 characters"
-    });
     // Create new chat
     const chat = new Chat({
       chatName: chatName,
