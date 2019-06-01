@@ -3,6 +3,7 @@ import io from "socket.io-client";
 import Chat from "../Chat";
 import Main from "../Main";
 import Welcome from "../Welcome";
+import Upload from "../Upload";
 import Container from "react-bootstrap/Container";
 import Jumbotron from "react-bootstrap/Jumbotron";
 
@@ -130,7 +131,7 @@ class App extends Component {
         if (res.success) {
           this.getChats();
           //this.setState({ chats: this.state.chats.concat(chat) });
-        } else console.log(res.error);
+        } else alert(res.message);
       });
   };
 
@@ -186,6 +187,9 @@ class App extends Component {
           chats.splice(index, 1);
           this.setState({ chats: chats });
         }
+        else {
+          alert(res.message);
+        }
       });
   };
 
@@ -207,6 +211,7 @@ class App extends Component {
   };
 
   render() {
+    console.log(this.socket);
     const { status, email, username, id } = this.state;
     let body;
     if (status === "welcome")
@@ -249,13 +254,18 @@ class App extends Component {
 
     return (
       <Container>
+      <Upload
+        socket={this.socket}
+       />
         <Jumbotron fluid style={{ marginTop: "1em" }}>
           <Container>
             <h1 className="text-center">Mobi</h1>
           </Container>
         </Jumbotron>
         {body}
+
       </Container>
+
     );
   }
 }

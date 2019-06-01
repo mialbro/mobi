@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+const aws = require('aws-sdk');
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
@@ -20,6 +21,13 @@ const User = require("./database/user");
 const Chat = require("./database/chat");
 
 const ObjectId = mongoose.Types.ObjectId;
+
+const S3_BUCKET = process.env.S3_Bucket_Name;
+
+aws.config.region = 'us-east-2';
+
+
+
 
 /*  Authorization for logging into mobi chat room  */
 passport.use(
@@ -93,20 +101,93 @@ const deleteChat = chatId => {
 };
 
 let usersOnline = {};
+let files = {};
+let struct = {
+  name: null,
+  type: null,
+  size: 0,
+  data: [],
+  slice: 0
+};
 
 // Client has connected
 io.on("connection", socket => {
   socket.emit("connected");
 
+  app.get('/account', (req, res) => res.render('account.html'));
+
+  app.get('/sign-s3', (req, res) => {
+    console.log(S3_BUCKET);
+    const s3 = new aws.S3();
+    const fileName = req.query['file-name'];
+    const fileType = req.query['file-type'];
+    const s3Params = {
+      Bucket: S3_BUCKET,
+      Key: fileName,
+      Expires: 60,
+      ContentType: fileType,
+      ACL: 'public-read'
+    };
+
+    s3.getSignedUrl('putObject', s3Params, (err, data) => {
+      if(err){
+        console.log(err);
+        return res.end();
+      }
+      const returnData = {
+        signedRequest: data,
+        url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+      };
+      console.log(returnData);
+      res.write(JSON.stringify(returnData));
+      res.end();
+    });
+  });
+
+/*
+  socket.on('slice-upload', (data) => {
+    console.log('uploading: ', data);
+    if (!files[data.name]) {
+      files[data.name] = Object.assign({}, struct, data);
+      files[data.name].data = [];
+    }
+
+    // convert the ArrayBuffer to Buffer
+    //data.data = new Buffer(new Uint8Array(data.data));
+    //save data
+    files[data.name].data.push(data.data);
+    files[data.name].slice++;
+    if (files[data.name].slice * 100000 >= files[data.name].size) {
+      let fileBuffer = Buffer.concat(files[data.name].data);
+
+      fs.writeFile('/tmp/' + data.name, fileBuffer, (err) => {
+        delete files[data.name];
+        if (err)
+          return socket.emit('upload-error');
+        socket.emit('end-upload');
+      });
+    }
+    else {
+      socket.emit('request-slice-upload', {
+        currentSlice: files[data.name].slice
+      });
+    }
+  });
+  */
+
+
+  /* user changed username. as a result send a new username list
+     to each member of each of the user's chats
+  */
   socket.on("username-changed", userId => {
     // find the user who just changed his username
     User.findById(userId, (err, user) => {
       // get all of the chats that the user is a part of
-      Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
+      Chat.find( { _id: { $in: user.chats } }, (err, chats) => {
         // loop through all his chats
         for (let i = 0; i < chats.length; i++) {
           // for each of his chats get all of the members
-          User.find({ _id: { $in: chats[i].members } }, (err, users) => {
+          User.find( { _id: { $in: chats[i].members } }, (err, users) => {
             let members = {};
             // loop through all of the members and store
             // them as an object
@@ -146,7 +227,6 @@ io.on("connection", socket => {
     if (usersOnline[socket.chatId] !== undefined)
       usersOnline[socket.chatId].splice(
         usersOnline[socket.chatId].indexOf(socket.username),
-        1
       );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
@@ -158,7 +238,6 @@ io.on("connection", socket => {
     if (usersOnline[socket.chatId] !== undefined)
       usersOnline[socket.chatId].splice(
         usersOnline[socket.chatId].indexOf(socket.username),
-        1
       );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
@@ -425,7 +504,7 @@ io.on("connection", socket => {
     } else
       return res.send({
         success: false,
-        error: "you have already joined this chat"
+        message: "you have already joined this chat"
       });
   });
 
@@ -490,7 +569,7 @@ io.on("connection", socket => {
   // and the chat id is removed from the member's chats prop
   socket.on("leave-chat", data => {
     // If there is only one member in the chat
-    // delete it
+    // delete its
     // otherwise just remove the member
     Chat.updateOne(
       { _id: data.chatId },

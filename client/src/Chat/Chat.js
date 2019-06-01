@@ -97,6 +97,19 @@ class Chat extends Component {
     'width': '20%'
   }
 
+  allowDrop = (e) => {
+    e.preventDefault();
+  }
+
+  drop = (e) => {
+    const files = e.dataTransfer.files;
+    for (let i = 0; i < files.length; i++) {
+      let f = files[i]
+      console.log(f);
+    }
+    e.preventDefault();
+  }
+
   render() {
     return (
       <div height={{ height: "100%" }}>
@@ -118,6 +131,9 @@ class Chat extends Component {
             width: "auto",
             height: this.state.height / 2 + "px"
           }}
+          fluid style={{ marginTop: "1em" }}
+          onDragOver={this.allowDrop}
+          onDrop={this.drop}
         >
           <Col xs={12} md={8}>
             {this.props.chat.messages.map((data, i) => {
