@@ -22,7 +22,7 @@ const Chat = require("./database/chat");
 
 const ObjectId = mongoose.Types.ObjectId;
 
-const S3_BUCKET = process.env.S3_Bucket_Name;
+const S3_BUCKET = process.env.S3_BUCKET;
 
 aws.config.region = 'us-east-2';
 
@@ -126,7 +126,7 @@ io.on("connection", socket => {
       Key: fileName,
       Expires: 60,
       ContentType: fileType,
-      ACL: 'private'
+      ACL: 'public-read'
     };
 
     s3.getSignedUrl('putObject', s3Params, (err, data) => {
