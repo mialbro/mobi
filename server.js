@@ -1,6 +1,5 @@
 const express = require("express");
 const fs = require("fs");
-const aws = require('aws-sdk');
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
@@ -21,10 +20,6 @@ const User = require("./database/user");
 const Chat = require("./database/chat");
 
 const ObjectId = mongoose.Types.ObjectId;
-
-const S3_BUCKET = process.env.S3_BUCKET;
-
-aws.config.region = 'us-east-2';
 
 
 
@@ -113,71 +108,6 @@ let struct = {
 // Client has connected
 io.on("connection", socket => {
   socket.emit("connected");
-
-  app.get('/account', (req, res) => res.render('account.html'));
-
-  app.get('/sign-s3', (req, res) => {
-    console.log(S3_BUCKET);
-    const s3 = new aws.S3();
-    const fileName = req.query['file-name'];
-    const fileType = req.query['file-type'];
-    const s3Params = {
-      Bucket: S3_BUCKET,
-      Key: fileName,
-      Expires: 60,
-      ContentType: fileType,
-      ACL: 'public-read'
-    };
-
-    s3.getSignedUrl('putObject', s3Params, (err, data) => {
-      if(err){
-        console.log(err);
-        return res.end();
-      }
-      const returnData = {
-        signedRequest: data,
-        url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-      };
-      console.log(returnData);
-      res.write(JSON.stringify(returnData));
-      res.end();
-    });
-  });
-
-  app.post('/save-details', (req, res) => {
-  // TODO: Read POSTed form data and do something useful
-});
-
-/*
-  socket.on('slice-upload', (data) => {
-    console.log('uploading: ', data);
-    if (!files[data.name]) {
-      files[data.name] = Object.assign({}, struct, data);
-      files[data.name].data = [];
-    }
-
-    // convert the ArrayBuffer to Buffer
-    //data.data = new Buffer(new Uint8Array(data.data));
-    //save data
-    files[data.name].data.push(data.data);
-    files[data.name].slice++;
-    if (files[data.name].slice * 100000 >= files[data.name].size) {
-      let fileBuffer = Buffer.concat(files[data.name].data);
-
-      fs.writeFile('/tmp/' + data.name, fileBuffer, (err) => {
-        delete files[data.name];
-        if (err)
-          return socket.emit('upload-error');
-        socket.emit('end-upload');
-      });
-    }
-    else {
-      socket.emit('request-slice-upload', {
-        currentSlice: files[data.name].slice
-      });
-    }
-  });
-  */
 
 
   /* user changed username. as a result send a new username list

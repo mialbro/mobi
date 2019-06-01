@@ -3,7 +3,6 @@ import io from "socket.io-client";
 import Chat from "../Chat";
 import Main from "../Main";
 import Welcome from "../Welcome";
-import Upload from "../Upload";
 import Container from "react-bootstrap/Container";
 import Jumbotron from "react-bootstrap/Jumbotron";
 
@@ -254,9 +253,6 @@ class App extends Component {
 
     return (
       <Container>
-      <Upload
-        socket={this.socket}
-       />
         <Jumbotron fluid style={{ marginTop: "1em" }}>
           <Container>
             <h1 className="text-center">Mobi</h1>

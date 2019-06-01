@@ -14,9 +14,8 @@ class Upload extends Component {
   }
 
   // handle file upload
-  drop = (e) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
+  drop = (files) => {
+    console.log(files);
     const file = files[0];
     if (file === null)
       return alert('No file selected');
@@ -59,23 +58,17 @@ class Upload extends Component {
 
 
   render() {
-    console.log(this.props);
     return (
-      <Jumbotron
-        fluid style={{ marginTop: "1em" }}
-        onDragOver={this.allowDrop}
-        onDrop={this.drop}
-      >
-      <input type="file" id="file-input" onChange={this.drop}>
+      <div>
+      <input type="file" id="file-input" onChange={this.drop}/>
       <p id="status">Please select a file</p>
-      <img id="preview" src="">
       <form method="POST" action="/save-details">
-      <input type="hidden" id="avatar-url" name="avatar-url" value="/images/default.png">
-      <input type="text" name="username" placeholder="Username"><br>
-      <input type="text" name="full-name" placeholder="Full name"><br><br>
-      <input type="submit" value="Update profile">
+        <input type="hidden" id="avatar-url" name="avatar-url" value=""/>
+        <input type="text" name="username" placeholder="Username"/>
+        <input type="text" name="full-name" placeholder="Full name"/>
+        <input type="submit" value="Update profile"/>
       </form>
-      </Jumbotron>
+      </div>
     );
   }
 }
