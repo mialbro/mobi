@@ -144,6 +144,10 @@ io.on("connection", socket => {
     });
   });
 
+  app.post('/save-details', (req, res) => {
+  // TODO: Read POSTed form data and do something useful
+});
+
 /*
   socket.on('slice-upload', (data) => {
     console.log('uploading: ', data);
