@@ -7,6 +7,7 @@ import Row from "react-bootstrap/Row";
 import ButtonToolbar from "react-bootstrap/Row";
 import Message from "../Message";
 import PreviewMessage from "../PreviewMessage";
+import PopUp from "../Modal/Modal";
 
 class Chat extends Component {
   constructor(props) {
@@ -18,20 +19,26 @@ class Chat extends Component {
       newMessages: [],
       textarea: 0,
       width: 0,
-      height: 0
+      height: 0,
+      uploadMedia: false,
+      media: {}
     };
   }
 
   scrollToBottom = () => {
     try {
       this.messagesEnd.scrollIntoView({ behavior: "smooth" });
-    } catch (e) {
-
-    }
+    } catch (e) {}
   };
 
   componentDidMount() {
     this.scrollToBottom();
+
+    this.props.socket.on("TEST", data => {
+      alert("TEST!!!");
+      //this.setState( { media: data } );
+    });
+
     // send chat id to server to create private message flow
     this.props.socket.emit("user-entered-chat", {
       chatId: this.props.chat._id,
@@ -49,9 +56,9 @@ class Chat extends Component {
     this.updateWindowDimensions();
   }
 
-  componentDidUpdate =() => {
-    this.scrollToBottom();;
-  }
+  componentDidUpdate = () => {
+    this.scrollToBottom();
+  };
 
   componentWillUnmount() {
     window.removeEventListener(
@@ -89,26 +96,34 @@ class Chat extends Component {
   leaveChat = () => {
     this.props.socket.emit("left-chat");
     this.props.goHome();
-  }
+  };
 
   BackStyles = {
-    'margin-left': 'auto',
-    'margin-right': 'auto',
-    'width': '20%'
-  }
+    "margin-left": "auto",
+    "margin-right": "auto",
+    width: "20%"
+  };
 
-  allowDrop = (e) => {
+  allowDrop = e => {
     e.preventDefault();
-  }
+  };
 
-  drop = (e) => {
+  drop = e => {
     const files = e.dataTransfer.files;
     for (let i = 0; i < files.length; i++) {
-      let f = files[i]
+      let f = files[i];
       console.log(f);
     }
     e.preventDefault();
-  }
+  };
+
+  enableMediaUpload = e => {
+    this.setState({ uploadMedia: true });
+  };
+
+  disableMediaUpload = e => {
+    this.setState({ uploadMedia: false });
+  };
 
   render() {
     return (
@@ -131,9 +146,6 @@ class Chat extends Component {
             width: "auto",
             height: this.state.height / 2 + "px"
           }}
-          fluid style={{ marginTop: "1em" }}
-          onDragOver={this.allowDrop}
-          onDrop={this.drop}
         >
           <Col xs={12} md={8}>
             {this.props.chat.messages.map((data, i) => {
@@ -143,6 +155,10 @@ class Chat extends Component {
                   username={this.props.members[data.userId]}
                   message={data.message}
                   value={data.message}
+                  contentType={data.contentType}
+                  src={data.src}
+                  show={data.show}
+                  name={data.name}
                 />
               );
             })}
@@ -166,7 +182,14 @@ class Chat extends Component {
           style={{ marginLeft: "auto", marginRight: "auto", bottom: 0 }}
         >
           <Col xs={12} md={8}>
-            <InputGroup className="mb-3" >
+            <InputGroup className="mb-3">
+              <InputGroup.Prepend>
+                <PopUp
+                  socket={this.props.socket}
+                  chatId={this.props.chat._id}
+                  id={this.props.user.id}
+                />
+              </InputGroup.Prepend>
               <FormControl
                 autoFocus
                 onKeyUp={this.props.socket.emit("preview-message", {

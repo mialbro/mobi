@@ -1,74 +1,43 @@
 import React, { Component } from "react";
-import Jumbotron from "react-bootstrap/Jumbotron";
+import axios from "axios";
 
 class Upload extends Component {
-  constructor(props) {
-    super(props);
+  constructor() {
+    super();
     this.state = {
-      files: []
+      file: null
     };
   }
 
-  allowDrop = (e) => {
+  submitFile = e => {
     e.preventDefault();
-  }
+    const formData = new FormData();
+    formData.append("file", this.state.file[0]);
+    axios
+      .post("/test-upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      })
+      .then(res => {
+        console.log("file uploeded:", res.data);
+      })
+      .catch(err => {});
+  };
 
-  // handle file upload
-  drop = (files) => {
-    console.log(files);
-    const file = files[0];
-    if (file === null)
-      return alert('No file selected');
-    this.getSignedRequest(file);
-  }
-
-  getSignedRequest = (file) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', `/sign-s3?file-name=${file.name}&file-type=${file.type}`);
-    xhr.onreadystatechange = () => {
-      if(xhr.readyState === 4){
-        if(xhr.status === 200){
-          const response = JSON.parse(xhr.responseText);
-          this.uploadFile(file, response.signedRequest, response.url);
-        }
-        else{
-          alert('Could not get signed URL.');
-        }
-      }
-    };
-    xhr.send();
-  }
-
-
-
-  uploadFile = (file, signedRequest, url) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-
-        }
-        else {
-          alert('Could not upload file');
-        }
-      }
-    };
-    xhr.send(file);
-  }
-
+  handleFileUpload = e => {
+    this.setState({ file: e.target.files });
+  };
 
   render() {
     return (
-      <div>
-      <input type="file" id="file-input" onChange={this.drop}/>
-      <p id="status">Please select a file</p>
-      <form method="POST" action="/save-details">
-        <input type="hidden" id="avatar-url" name="avatar-url" value=""/>
-        <input type="text" name="username" placeholder="Username"/>
-        <input type="text" name="full-name" placeholder="Full name"/>
-        <input type="submit" value="Update profile"/>
+      <form onSubmit={this.submitFile}>
+        <input
+          label="upload file"
+          name="file"
+          type="file"
+          onChange={this.handleFileUpload}
+        />
+        <button type="submit">Send</button>
       </form>
-      </div>
     );
   }
 }

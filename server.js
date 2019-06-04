@@ -1,5 +1,11 @@
-const express = require("express");
+const AWS = require("aws-sdk");
 const fs = require("fs");
+const fileType = require("file-type");
+const bluebird = require("bluebird");
+const multiparty = require("multiparty");
+require("dotenv").config();
+//
+const express = require("express");
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
@@ -18,11 +24,9 @@ const keys = require("./config/keys");
 
 const User = require("./database/user");
 const Chat = require("./database/chat");
+const Media = require("./database/media");
 
 const ObjectId = mongoose.Types.ObjectId;
-
-
-
 
 /*  Authorization for logging into mobi chat room  */
 passport.use(
@@ -96,19 +100,154 @@ const deleteChat = chatId => {
 };
 
 let usersOnline = {};
-let files = {};
-let struct = {
-  name: null,
-  type: null,
-  size: 0,
-  data: [],
-  slice: 0
+let online = {};
+
+// S3 setup
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+});
+AWS.config.setPromisesDependency(bluebird);
+const s3 = new AWS.S3();
+
+let params = {
+  ACL: "public-read",
+  Body: null,
+  Bucket: process.env.S3_Bucket_Name,
+  ContentType: null,
+  Key: null
 };
 
 // Client has connected
 io.on("connection", socket => {
   socket.emit("connected");
 
+  // send all of the other chat members a preview of the Media
+  // and the media message -> [ src='x' and contentType ]
+  socket.on("media-preview", data => {
+    socket.broadcast.to(socket.chatId).emit("preview-media", data);
+  });
+
+  socket.on("upload-file", req => {
+    const form = new multiparty.Form();
+    form.parse(req, async (err, fields, files) => {
+      const file = files.file[0];
+      Chat.findById(online[socket.userId].chat, (err, chat) => {
+        if (chat) {
+          const message = {
+            owner: socket.userId,
+            name: file.originalFilename,
+            src: "",
+            contentType: file.headers["content-type"]
+          };
+          const msgIndex = chat.messages.push(message);
+          chat.save(err => {
+            if (!err) {
+              try {
+                let newMessage = chat.messages[chat.messages.length - 1];
+                const path = file.path;
+                const buffer = fs.readFileSync(path);
+                const type = file.headers["content-type"];
+                const fileName = `media/${newMessage._id}`;
+                params.Body = buffer;
+                params.ContentType = type;
+                params.Key = fileName;
+                s3.upload(params, (err, data) => {
+                  newMessage.src = data.Location;
+                  chat.save();
+
+                  socket.emit("upload-file", {
+                    src: data.Location,
+                    contentType: type,
+                    name: file.originalFilename
+                  });
+
+                  //res.status(200).send();
+                });
+              } catch (err) {
+                chat.messages.splice(msgIndex, 1);
+                chat.save();
+                //return res.status(400).send(err);
+              }
+            }
+          });
+        }
+      });
+    });
+  });
+
+  socket.on("cancel-media", data => {
+    Chat.findById(socket.chatId, (err, chat) => {
+      let msg = chat.messages.id(data.id);
+      let index = chat.messages.indexOf(msg);
+      chat.messages.splice(index, 1);
+      chat.save();
+    });
+  });
+
+  socket.on("show-media", data => {
+    Chat.findById(socket.chatId, (err, chat) => {
+      let message = chat.messages.id(data.id);
+      message.show = true;
+      const index = chat.messages.indexOf(message);
+
+      chat.messages.push(message);
+      chat.messages.splice(index, 1);
+      chat.save();
+      socket.emit("message-sent", message);
+      socket.broadcast.to(chat._id).emit("message-sent", message);
+      //console.log('chat:', chat);
+    });
+  });
+
+  app.post("/upload-file", (req, res) => {
+    const form = new multiparty.Form();
+    form.parse(req, async (err, fields, files) => {
+      const obj = Object.keys(files)[0];
+      const file = files[obj][0];
+      Chat.findById(online[req.user._id].chat, (err, chat) => {
+        if (chat) {
+          const message = {
+            show: false,
+            userId: req.user._id,
+            name: file.originalFilename,
+            src: "",
+            contentType: file.headers["content-type"]
+          };
+          const msgIndex = chat.messages.push(message);
+          chat.save(err => {
+            if (!err) {
+              try {
+                let newMessage = chat.messages[msgIndex - 1];
+                const path = file.path;
+                const buffer = fs.readFileSync(path);
+                const type = file.headers["content-type"];
+                const fileName = `media/${newMessage._id}`;
+                params.Body = buffer;
+                params.ContentType = type;
+                params.Key = fileName;
+                s3.upload(params, (err, data) => {
+                  newMessage.src = data.Location;
+                  chat.save();
+                  socket.emit("upload-file", "hello");
+                  res.send({
+                    src: data.Location,
+                    contentType: type,
+                    name: file.originalFilename,
+                    id: newMessage._id
+                  });
+                });
+              } catch (err) {
+                chat.messages.splice(msgIndex - 1, 1);
+                chat.save();
+                return res.status(400).send(err);
+              }
+            }
+          });
+        }
+      });
+    });
+  });
 
   /* user changed username. as a result send a new username list
      to each member of each of the user's chats
@@ -117,11 +256,11 @@ io.on("connection", socket => {
     // find the user who just changed his username
     User.findById(userId, (err, user) => {
       // get all of the chats that the user is a part of
-      Chat.find( { _id: { $in: user.chats } }, (err, chats) => {
+      Chat.find({ _id: { $in: user.chats } }, (err, chats) => {
         // loop through all his chats
         for (let i = 0; i < chats.length; i++) {
           // for each of his chats get all of the members
-          User.find( { _id: { $in: chats[i].members } }, (err, users) => {
+          User.find({ _id: { $in: chats[i].members } }, (err, users) => {
             let members = {};
             // loop through all of the members and store
             // them as an object
@@ -140,6 +279,7 @@ io.on("connection", socket => {
   socket.on("user-entered-chat", data => {
     socket.join(data.chatId);
     socket.username = data.username;
+    socket.userId = data.userId;
     socket.chatId = data.chatId;
     socket.broadcast.to(data.chatId).emit("user-entered-chat", data);
     if (!usersOnline[data.chatId]) usersOnline[data.chatId] = [];
@@ -160,7 +300,7 @@ io.on("connection", socket => {
   socket.on("disconnect", () => {
     if (usersOnline[socket.chatId] !== undefined)
       usersOnline[socket.chatId].splice(
-        usersOnline[socket.chatId].indexOf(socket.username),
+        usersOnline[socket.chatId].indexOf(socket.username)
       );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
@@ -171,7 +311,7 @@ io.on("connection", socket => {
   socket.on("left-chat", () => {
     if (usersOnline[socket.chatId] !== undefined)
       usersOnline[socket.chatId].splice(
-        usersOnline[socket.chatId].indexOf(socket.username),
+        usersOnline[socket.chatId].indexOf(socket.username)
       );
     socket.broadcast.to(socket.chatId).emit("user-left-chat", {
       username: socket.username,
@@ -210,7 +350,7 @@ io.on("connection", socket => {
   /* Logs the user in */
   app.post("/login", passport.authenticate("local"), (req, res) => {
     socket.username = req.user.username;
-    socket.userId = req.user._id;
+    online[req.user._id] = {};
     res.send({
       success: true,
       message: "authentication succeeded",
@@ -294,12 +434,17 @@ io.on("connection", socket => {
             users.forEach(user => {
               x.push(user.username);
             });
-            res.send({ success: false, message: "owner cannot leave chat. first change owner", members: x });
+            res.send({
+              success: false,
+              message: "owner cannot leave chat. first change owner",
+              members: x
+            });
           }
         });
       }
       // you are the only member left in the chat
       else if (chat.members.length === 1) {
+        online[req.user._id].chat = "";
         deleteChat(chat._id);
         chat.members.splice(index, 1);
         chat.save();
@@ -308,6 +453,7 @@ io.on("connection", socket => {
 
       // you are not the owner of the chat
       else if (req.user._id !== chat.owner._id) {
+        online[req.user._d].chat = "";
         chat.members.splice(index, 1);
         chat.save();
         const chatIndex = req.user.chats.indexOf(chat._id);
@@ -381,7 +527,9 @@ io.on("connection", socket => {
       Chat.findById(data.chatId, (err, chat) => {
         const message = {
           userId: data.userId,
-          message: data.message
+          message: data.message,
+          contentType: "text",
+          show: true
         };
         chat.messages.push(message);
         chat.save();
@@ -451,6 +599,7 @@ io.on("connection", socket => {
       // chat was found
       else {
         User.find({ _id: { $in: chat.members } }, (err, users) => {
+          online[req.user._id].chat = chat._id;
           let members = {};
           users.forEach(user => {
             members[user._id] = user.username;

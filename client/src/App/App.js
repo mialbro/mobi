@@ -28,9 +28,9 @@ class App extends Component {
   componentDidMount() {
     this.socket = io();
 
-    this.socket.on("return-members", (data) => {
-      this.setState( { members: data } );
-    })
+    this.socket.on("return-members", data => {
+      this.setState({ members: data });
+    });
 
     // Update chat list if a chat was deleted
     // And the user has not refreshed their screen
@@ -185,8 +185,7 @@ class App extends Component {
           const index = chats.findIndex(obj => obj.chatId === data.chatId);
           chats.splice(index, 1);
           this.setState({ chats: chats });
-        }
-        else {
+        } else {
           alert(res.message);
         }
       });
@@ -210,7 +209,6 @@ class App extends Component {
   };
 
   render() {
-    console.log(this.socket);
     const { status, email, username, id } = this.state;
     let body;
     if (status === "welcome")
@@ -259,9 +257,7 @@ class App extends Component {
           </Container>
         </Jumbotron>
         {body}
-
       </Container>
-
     );
   }
 }

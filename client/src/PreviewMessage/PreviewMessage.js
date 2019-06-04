@@ -13,20 +13,17 @@ class PreviewMessage extends Component {
     this._isMounted = true;
     this.props.socket.on("users-online", data => {
       let { messages } = this.state;
-      (data[this.props.chatId]).forEach(user => {
-        if (user !== this.props.username)
-          messages[user] = '';
+      data[this.props.chatId].forEach(user => {
+        if (user !== this.props.username) messages[user] = "";
       });
-      if (this._isMounted)
-        this.setState( { messages: messages } );
+      if (this._isMounted) this.setState({ messages: messages });
       this.props.scrollToBottom();
     });
 
     this.props.socket.on("preview-message", data => {
       let { messages } = this.state;
       messages[data.username] = data.message;
-      if (this._isMounted)
-        this.setState( { messages: messages } );
+      if (this._isMounted) this.setState({ messages: messages });
       //this.props.scrollToBottom();
     });
 
@@ -34,29 +31,23 @@ class PreviewMessage extends Component {
     this.props.socket.on("user-left-chat", data => {
       let { messages } = this.state;
       delete messages[data.username];
-      if (this._isMounted)
-        this.setState( { messages: messages } );
-    })
+      if (this._isMounted) this.setState({ messages: messages });
+    });
 
     this.props.socket.on("user-entered-chat", data => {
       let { messages } = this.state;
-      messages[data.username] = '';
-      if (this._isMounted)
-        this.setState ( { messages: messages } );
+      messages[data.username] = "";
+      if (this._isMounted) this.setState({ messages: messages });
       try {
         this.props.scrollToBottom();
-      }
-      catch {
-
-      }
-
+      } catch {}
     });
   }
 
   componentWillUnmount() {
     this._isMounted = false;
   }
-  previewMessage = data => { };
+  previewMessage = data => {};
 
   style = {
     //'position': 'absolute'
@@ -69,6 +60,8 @@ class PreviewMessage extends Component {
         {Object.keys(messages).map((key, i) => {
           return (
             <Message
+              contentType={this.props.contentType}
+              src={this.props.src}
               style={this.style}
               key={i}
               bg={"success"}
