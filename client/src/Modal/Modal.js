@@ -23,12 +23,6 @@ class PopUp extends Component {
     this.props.socket.on("preview-media-cancel", () => {
       this.setState({ media: {} });
     });
-    /*
-    this.props.socket.on("upload-file", data => {
-      console.log('data:', data);
-      this.setState( { media: data } );
-    });
-    */
   };
 
   cancel = () => {
@@ -46,27 +40,28 @@ class PopUp extends Component {
   };
 
   submitFile = e => {
+
     // e.preventDefault();
     const formData = new FormData();
     formData.append(this.props.id, e.target.files[0]);
     //formData.append('user', this.props.id);
-
+    this.props.handleLoading();
     fetch("/upload-file", {
       method: "POST",
       body: formData
     })
       .then(res => res.json())
       .then(res => {
-        this.setState({ media: res });
+        this.setState( { media: res, loading: false } );
       })
       .then(res => {
         this.send();
+        this.props.handleDone();
       })
       .catch(err => {
+        this.props.handleDone();
         console.log("error:", err);
       });
-
-    //this.props.socket.emit("upload-file", {formData, userId: this.props.user._id});
   };
 
   handleFileUpload = e => {
@@ -77,11 +72,12 @@ class PopUp extends Component {
   };
 
   render() {
+    const { loading } = this.props;
     const { media } = this.state;
     return (
-      <ButtonToolbar>
-        <label className="custom-file-upload">
-          <input type="file" onChange={this.handleFileUpload} />
+      <ButtonToolbar disabled={loading}>
+        <label className="custom-file-upload" disabled={loading}>
+          <input type="file" onChange={this.handleFileUpload} disabled={loading} />
           Upload Media
         </label>
       </ButtonToolbar>

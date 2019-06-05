@@ -5,6 +5,7 @@ import FormControl from "react-bootstrap/FormControl";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import ButtonToolbar from "react-bootstrap/Row";
+import Spinner from "react-bootstrap/Spinner";
 import Message from "../Message";
 import PreviewMessage from "../PreviewMessage";
 import PopUp from "../Modal/Modal";
@@ -21,7 +22,8 @@ class Chat extends Component {
       width: 0,
       height: 0,
       uploadMedia: false,
-      media: {}
+      media: {},
+      loading: false
     };
   }
 
@@ -125,6 +127,14 @@ class Chat extends Component {
     this.setState({ uploadMedia: false });
   };
 
+  handleLoading = () => {
+    this.setState( { loading: true } );
+  }
+
+  handleDone = () => {
+    this.setState( { loading: false } );
+  }
+
   render() {
     return (
       <div height={{ height: "100%" }}>
@@ -188,10 +198,14 @@ class Chat extends Component {
                   socket={this.props.socket}
                   chatId={this.props.chat._id}
                   id={this.props.user.id}
+                  handleLoading={this.handleLoading}
+                  handleDone={this.handleDone}
+                  loading={this.state.loading}
                 />
               </InputGroup.Prepend>
               <FormControl
                 autoFocus
+                disabled={this.state.loading}
                 onKeyUp={this.props.socket.emit("preview-message", {
                   message: this.state.newMessage,
                   username: this.props.user.username,
@@ -204,8 +218,19 @@ class Chat extends Component {
                 onKeyUp={e => (e.keyCode === 13 ? this.sendMessage() : null)}
               />
               <InputGroup.Append>
-                <Button variant="outline-secondary" onClick={this.sendMessage}>
+                <Button variant="outline-secondary" onClick={this.sendMessage} disabled={this.state.loading}>
                   Send
+                  {
+                    this.state.loading ? (
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                    ) : null
+                  }
                 </Button>
               </InputGroup.Append>
             </InputGroup>

@@ -189,14 +189,9 @@ io.on("connection", socket => {
     Chat.findById(socket.chatId, (err, chat) => {
       let message = chat.messages.id(data.id);
       message.show = true;
-      const index = chat.messages.indexOf(message);
-
-      chat.messages.push(message);
-      chat.messages.splice(index, 1);
       chat.save();
       socket.emit("message-sent", message);
       socket.broadcast.to(chat._id).emit("message-sent", message);
-      //console.log('chat:', chat);
     });
   });
 
@@ -409,7 +404,7 @@ io.on("connection", socket => {
 
   /*  Delete a chat and update each of the users */
   app.post("/delete-chat", (req, res) => {
-    deleteChat(req.body.chatId);
+    deleteChat(req.body.chatId );
     res.send({ success: true });
   });
 
